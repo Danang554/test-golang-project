@@ -1,0 +1,33 @@
+# Binaries and executables
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+tmp/
+
+# Environment files
+.env
+
+# Go test and coverage
+*.out
+*.test
+coverage/
+
+# IDE and OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Storage and Logs
+storage/logs/*
+!storage/logs/.gitkeep
+*.log
+
+COMMANDS.md
+Makefile
