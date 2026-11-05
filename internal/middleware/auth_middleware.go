@@ -2,28 +2,31 @@ package middleware
 
 import (
 	"fmt"
-	"net/http"
 	"strings"
+	"time"
 
 	"test-golang-project/config"
+	"test-golang-project/internal/repository"
+	"test-golang-project/pkg/apperror"
 	"test-golang-project/pkg/response"
+	"test-golang-project/pkg/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
+func AuthMiddleware(cfg *config.Config, revokedTokenRepo repository.RevokedTokenRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			response.Error(c, http.StatusUnauthorized, "Authorization header is required", nil)
+			response.HandleError(c, apperror.Unauthorized("Authorization header is required"))
 			c.Abort()
 			return
 		}
 
 		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			response.Error(c, http.StatusUnauthorized, "Invalid authorization format. Format must be 'Bearer <token>'", nil)
+			response.HandleError(c, apperror.Unauthorized("Invalid authorization format. Format must be 'Bearer <token>'"))
 			c.Abort()
 			return
 		}
@@ -38,21 +41,21 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 		})
 
 		if err != nil || !token.Valid {
-			response.Error(c, http.StatusUnauthorized, "Invalid or expired token", nil)
+			response.HandleError(c, apperror.Unauthorized("Invalid or expired token"))
 			c.Abort()
 			return
 		}
 
 		claims, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
-			response.Error(c, http.StatusUnauthorized, "Invalid token claims", nil)
+			response.HandleError(c, apperror.Unauthorized("Invalid token claims"))
 			c.Abort()
 			return
 		}
 
 		sub, exists := claims["sub"]
 		if !exists {
-			response.Error(c, http.StatusUnauthorized, "Token does not contain user identification", nil)
+			response.HandleError(c, apperror.Unauthorized("Token does not contain user identification"))
 			c.Abort()
 			return
 		}
@@ -67,13 +70,39 @@ func AuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 		case uint:
 			userID = v
 		default:
-			response.Error(c, http.StatusUnauthorized, "Invalid user identification format", nil)
+			response.HandleError(c, apperror.Unauthorized("Invalid user identification format"))
 			c.Abort()
 			return
 		}
 
-		// Set user ID into Gin context so controllers can access it
+		// Check if token has been revoked (logged out)
+		if revokedTokenRepo != nil {
+			tokenHash := utils.HashToken(tokenString)
+			isRevoked, err := revokedTokenRepo.IsRevoked(c.Request.Context(), tokenHash)
+			if err != nil {
+				response.HandleError(c, apperror.Internal(err, "Failed to verify token revocation"))
+				c.Abort()
+				return
+			}
+			if isRevoked {
+				response.HandleError(c, apperror.Unauthorized("Unauthorized. Please login first"))
+				c.Abort()
+				return
+			}
+		}
+
+		// Extract token expiration
+		var expTime time.Time
+		if expVal, exists := claims["exp"]; exists {
+			if expFloat, ok := expVal.(float64); ok {
+				expTime = time.Unix(int64(expFloat), 0)
+			}
+		}
+
+		// Set context values for downstream handlers
 		c.Set("user_id", userID)
+		c.Set("token_string", tokenString)
+		c.Set("token_exp", expTime)
 		c.Next()
 	}
 }

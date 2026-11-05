@@ -2,18 +2,14 @@ package main
 
 import (
 	"log/slog"
-	"net/http"
 
 	"test-golang-project/config"
 	"test-golang-project/internal/controller"
-	"test-golang-project/internal/middleware"
 	"test-golang-project/internal/repository"
+	"test-golang-project/internal/routes"
 	"test-golang-project/internal/service"
 	"test-golang-project/pkg/database"
 	"test-golang-project/pkg/logger"
-	"test-golang-project/pkg/response"
-
-	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -31,54 +27,30 @@ func main() {
 	}
 
 	// 4. Initialize layers (Dependency Injection)
+	var authController *controller.AuthController
 	var userController *controller.UserController
+	var revokedTokenRepo repository.RevokedTokenRepository
+
 	if db != nil {
 		userRepo := repository.NewUserRepository(db)
-		userService := service.NewUserService(userRepo, cfg)
+		revokedTokenRepo = repository.NewRevokedTokenRepository(db)
+		authService := service.NewAuthService(userRepo, revokedTokenRepo, cfg)
+		userService := service.NewUserService(userRepo)
+
+		authController = controller.NewAuthController(authService)
 		userController = controller.NewUserController(userService)
 	}
 
-	// 5. Initialize Gin router
-	r := gin.Default()
-
-	// 6. Global Middlewares
-	r.Use(gin.Recovery())
-
-	// 7. Base Routes
-	r.GET("/health", func(c *gin.Context) {
-		dbStatus := "connected"
-		if db == nil {
-			dbStatus = "disconnected"
-		}
-		response.Success(c, http.StatusOK, "Service is running healthy", gin.H{
-			"app_name": cfg.AppName,
-			"database": dbStatus,
-		})
+	// 5. Setup Router & Routes
+	r := routes.SetupRouter(routes.Config{
+		AppConfig:        cfg,
+		DB:               db,
+		AuthController:   authController,
+		UserController:   userController,
+		RevokedTokenRepo: revokedTokenRepo,
 	})
 
-	// 8. API Routes
-	api := r.Group("/api/v1")
-	{
-		// Public Auth routes
-		auth := api.Group("/auth")
-		{
-			if userController != nil {
-				auth.POST("/register", userController.Register)
-				auth.POST("/login", userController.Login)
-			}
-		}
-
-		// Protected routes (Require JWT)
-		protected := api.Group("")
-		protected.Use(middleware.AuthMiddleware(cfg))
-		{
-			if userController != nil {
-				protected.GET("/profile", userController.GetProfile)
-			}
-		}
-	}
-
-	// 9. Start HTTP Server
+	// 6. Start HTTP Server
 	slog.Info("Starting server", "app", cfg.AppName, "port", cfg.AppPort, "env", cfg.AppEnv)
 	if err := r.Run(":" + cfg.AppPort); err != nil {
 		slog.Error("Server failed to run", "error", err)
