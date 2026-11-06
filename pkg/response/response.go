@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"net/http"
 
 	"test-golang-project/pkg/apperror"
@@ -14,11 +15,19 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+type PaginationMeta struct {
+	Page       int   `json:"page"`
+	Limit      int   `json:"limit"`
+	TotalItems int64 `json:"total_items"`
+	TotalPages int   `json:"total_pages"`
+}
+
 type APIResponse struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-	Data    any    `json:"data,omitempty"`
-	Errors  any    `json:"errors,omitempty"`
+	Success    bool            `json:"success"`
+	Message    string          `json:"message"`
+	Data       any             `json:"data,omitempty"`
+	Pagination *PaginationMeta `json:"pagination,omitempty"`
+	Errors     any             `json:"errors,omitempty"`
 }
 
 func Success(c *gin.Context, statusCode int, message string, data any) {
@@ -26,6 +35,28 @@ func Success(c *gin.Context, statusCode int, message string, data any) {
 		Success: true,
 		Message: message,
 		Data:    data,
+	})
+}
+
+func SuccessWithPagination(c *gin.Context, statusCode int, message string, data any, page int, limit int, totalItems int64) {
+	totalPages := 0
+	if limit > 0 {
+		totalPages = int(math.Ceil(float64(totalItems) / float64(limit)))
+	}
+	if totalPages == 0 && totalItems > 0 {
+		totalPages = 1
+	}
+
+	c.JSON(statusCode, APIResponse{
+		Success: true,
+		Message: message,
+		Data:    data,
+		Pagination: &PaginationMeta{
+			Page:       page,
+			Limit:      limit,
+			TotalItems: totalItems,
+			TotalPages: totalPages,
+		},
 	})
 }
 

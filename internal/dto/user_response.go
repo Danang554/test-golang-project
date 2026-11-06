@@ -6,6 +6,7 @@ import (
 	"test-golang-project/internal/entity"
 )
 
+// UserResponse represents full user data (detail, profile, create, update)
 type UserResponse struct {
 	ID        uint       `json:"id"`
 	Name      string     `json:"name"`
@@ -14,9 +15,9 @@ type UserResponse struct {
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
 	DeletedAt *time.Time `json:"deleted_at"`
-	// DeletedAt *time.Time `json:"deleted_at,omitempty"`
 }
 
+// UserListResponse represents compact user data for list endpoints (no timestamps)
 type UserListResponse struct {
 	ID      uint   `json:"id"`
 	Name    string `json:"name"`
@@ -24,7 +25,7 @@ type UserListResponse struct {
 	IsAdmin bool   `json:"is_admin"`
 }
 
-// ToUserResponse maps entity.User to UserResponse (Resource Mapper)
+// ToUserResponse maps a single entity.User to full UserResponse
 func ToUserResponse(user *entity.User) *UserResponse {
 	if user == nil {
 		return nil
@@ -46,16 +47,19 @@ func ToUserResponse(user *entity.User) *UserResponse {
 	}
 }
 
-// ToUserListResponse maps entity.User to compact UserListResponse
-func ToUserListResponse(user *entity.User) *UserListResponse {
-	if user == nil {
-		return nil
+// ToUserListResponse maps a slice of entity.User to compact UserListResponse slice
+func ToUserListResponse(users []*entity.User) []*UserListResponse {
+	list := make([]*UserListResponse, 0, len(users))
+	for _, u := range users {
+		if u == nil {
+			continue
+		}
+		list = append(list, &UserListResponse{
+			ID:      u.ID,
+			Name:    u.Name,
+			Email:   u.Email,
+			IsAdmin: u.IsAdmin,
+		})
 	}
-
-	return &UserListResponse{
-		ID:      user.ID,
-		Name:    user.Name,
-		Email:   user.Email,
-		IsAdmin: user.IsAdmin,
-	}
+	return list
 }

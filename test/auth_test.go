@@ -50,6 +50,50 @@ func (m *MockUserRepository) FindByID(ctx context.Context, id uint) (*entity.Use
 	return args.Get(0).(*entity.User), args.Error(1)
 }
 
+func (m *MockUserRepository) FindAll(ctx context.Context, search string, page int, limit int) ([]*entity.User, int64, error) {
+	args := m.Called(ctx, search, page, limit)
+	if args.Get(0) == nil {
+		return nil, args.Get(1).(int64), args.Error(2)
+	}
+	return args.Get(0).([]*entity.User), args.Get(1).(int64), args.Error(2)
+}
+
+func (m *MockUserRepository) Update(ctx context.Context, user *entity.User) error {
+	args := m.Called(ctx, user)
+	return args.Error(0)
+}
+
+func (m *MockUserRepository) Delete(ctx context.Context, id uint) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockUserRepository) FindAllDeleted(ctx context.Context, search string, page int, limit int) ([]*entity.User, int64, error) {
+	args := m.Called(ctx, search, page, limit)
+	if args.Get(0) == nil {
+		return nil, args.Get(1).(int64), args.Error(2)
+	}
+	return args.Get(0).([]*entity.User), args.Get(1).(int64), args.Error(2)
+}
+
+func (m *MockUserRepository) FindDeletedByID(ctx context.Context, id uint) (*entity.User, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.User), args.Error(1)
+}
+
+func (m *MockUserRepository) Restore(ctx context.Context, id uint) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
+func (m *MockUserRepository) ForceDelete(ctx context.Context, id uint) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
 // MockRevokedTokenRepository implements repository.RevokedTokenRepository for testing
 type MockRevokedTokenRepository struct {
 	mock.Mock
@@ -640,7 +684,7 @@ func TestAuth_Logout(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
-		assert.Contains(t, w.Body.String(), "Authorization header is required")
+		assert.Contains(t, w.Body.String(), "Unauthorized. Please login first")
 	})
 
 	t.Run("Failure - Invalid header format, missing Bearer prefix (401 Unauthorized)", func(t *testing.T) {

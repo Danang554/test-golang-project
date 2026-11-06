@@ -59,7 +59,23 @@ func SetupRouter(c Config) *gin.Engine {
 				protected.POST("/auth/logout", c.AuthController.Logout)
 			}
 			if c.UserController != nil {
+				// User Profile routes
 				protected.GET("/profile", c.UserController.GetProfile)
+				protected.PATCH("/profile", c.UserController.UpdateProfile)
+
+				// Admin Only User Management routes
+				adminUser := protected.Group("/user")
+				adminUser.Use(middleware.AdminMiddleware())
+				{
+					adminUser.GET("", c.UserController.GetUsers)
+					adminUser.POST("", c.UserController.CreateUser)
+					adminUser.GET("/deleted", c.UserController.GetDeletedUsers)
+					adminUser.GET("/:id", c.UserController.GetUserByID)
+					adminUser.PATCH("/:id", c.UserController.UpdateUser)
+					adminUser.DELETE("/:id", c.UserController.DeleteUser)
+					adminUser.PATCH("/:id/restore", c.UserController.RestoreUser)
+					adminUser.DELETE("/:id/permanent", c.UserController.ForceDeleteUser)
+				}
 			}
 		}
 	}

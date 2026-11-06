@@ -19,7 +19,7 @@ func AuthMiddleware(cfg *config.Config, revokedTokenRepo repository.RevokedToken
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			response.HandleError(c, apperror.Unauthorized("Authorization header is required"))
+			response.HandleError(c, apperror.Unauthorized("Unauthorized. Please login first"))
 			c.Abort()
 			return
 		}
@@ -91,7 +91,7 @@ func AuthMiddleware(cfg *config.Config, revokedTokenRepo repository.RevokedToken
 			}
 		}
 
-		// Extract token expiration
+		// Extract token expiration and admin status
 		var expTime time.Time
 		if expVal, exists := claims["exp"]; exists {
 			if expFloat, ok := expVal.(float64); ok {
@@ -99,8 +99,16 @@ func AuthMiddleware(cfg *config.Config, revokedTokenRepo repository.RevokedToken
 			}
 		}
 
+		var isAdmin bool
+		if adminVal, exists := claims["is_admin"]; exists {
+			if b, ok := adminVal.(bool); ok {
+				isAdmin = b
+			}
+		}
+
 		// Set context values for downstream handlers
 		c.Set("user_id", userID)
+		c.Set("is_admin", isAdmin)
 		c.Set("token_string", tokenString)
 		c.Set("token_exp", expTime)
 		c.Next()
