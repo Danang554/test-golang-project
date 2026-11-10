@@ -14,11 +14,12 @@ import (
 )
 
 type Config struct {
-	AppConfig        *config.Config
-	DB               *gorm.DB
-	AuthController   *controller.AuthController
-	UserController   *controller.UserController
-	RevokedTokenRepo repository.RevokedTokenRepository
+	AppConfig          *config.Config
+	DB                 *gorm.DB
+	AuthController     *controller.AuthController
+	UserController     *controller.UserController
+	CategoryController *controller.CategoryController
+	RevokedTokenRepo   repository.RevokedTokenRepository
 }
 
 func SetupRouter(c Config) *gin.Engine {
@@ -75,6 +76,21 @@ func SetupRouter(c Config) *gin.Engine {
 					adminUser.DELETE("/:id", c.UserController.DeleteUser)
 					adminUser.PATCH("/:id/restore", c.UserController.RestoreUser)
 					adminUser.DELETE("/:id/permanent", c.UserController.ForceDeleteUser)
+				}
+			}
+
+			if c.CategoryController != nil {
+				// Category routes (Creator only management)
+				categoryGroup := protected.Group("/category")
+				{
+					categoryGroup.GET("", c.CategoryController.GetCategories)
+					categoryGroup.POST("", c.CategoryController.Create)
+					categoryGroup.GET("/deleted", c.CategoryController.GetDeletedCategories)
+					categoryGroup.GET("/:id", c.CategoryController.GetByID)
+					categoryGroup.PATCH("/:id", c.CategoryController.Update)
+					categoryGroup.DELETE("/:id", c.CategoryController.Delete)
+					categoryGroup.PATCH("/:id/restore", c.CategoryController.Restore)
+					categoryGroup.DELETE("/:id/permanent", c.CategoryController.ForceDelete)
 				}
 			}
 		}

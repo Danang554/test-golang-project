@@ -13,8 +13,8 @@ import (
 )
 
 func NewMySQLDatabase(cfg *config.Config) (*gorm.DB, error) {
-	// DSN format: username:password@tcp(host:port)/dbname?charset=utf8mb4&parseTime=True&loc=Local
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+	// DSN format: username:password@tcp(host:port)/dbname?charset=utf8mb4&parseTime=True&loc=Local&timeout=3s
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local&timeout=3s",
 		cfg.DB.User,
 		cfg.DB.Password,
 		cfg.DB.Host,

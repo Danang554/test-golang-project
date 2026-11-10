@@ -30,6 +30,18 @@ func SeedUsers(db *gorm.DB) error {
 			Password: string(hashedPassword),
 			IsAdmin:  false,
 		},
+		{
+			Name:     "Nao",
+			Email:    "nao@example.com",
+			Password: string(hashedPassword),
+			IsAdmin:  false,
+		},
+		{
+			Name:     "Shin",
+			Email:    "shin@example.com",
+			Password: string(hashedPassword),
+			IsAdmin:  true,
+		},
 	}
 
 	for _, user := range users {

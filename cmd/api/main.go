@@ -2,6 +2,7 @@ package main
 
 import (
 	"log/slog"
+	"net"
 
 	"test-golang-project/config"
 	"test-golang-project/internal/controller"
@@ -29,30 +30,37 @@ func main() {
 	// 4. Initialize layers (Dependency Injection)
 	var authController *controller.AuthController
 	var userController *controller.UserController
+	var categoryController *controller.CategoryController
 	var revokedTokenRepo repository.RevokedTokenRepository
 
 	if db != nil {
 		userRepo := repository.NewUserRepository(db)
+		categoryRepo := repository.NewCategoryRepository(db)
 		revokedTokenRepo = repository.NewRevokedTokenRepository(db)
+
 		authService := service.NewAuthService(userRepo, revokedTokenRepo, cfg)
 		userService := service.NewUserService(userRepo)
+		categoryService := service.NewCategoryService(categoryRepo)
 
 		authController = controller.NewAuthController(authService)
 		userController = controller.NewUserController(userService)
+		categoryController = controller.NewCategoryController(categoryService)
 	}
 
 	// 5. Setup Router & Routes
 	r := routes.SetupRouter(routes.Config{
-		AppConfig:        cfg,
-		DB:               db,
-		AuthController:   authController,
-		UserController:   userController,
-		RevokedTokenRepo: revokedTokenRepo,
+		AppConfig:          cfg,
+		DB:                 db,
+		AuthController:     authController,
+		UserController:     userController,
+		CategoryController: categoryController,
+		RevokedTokenRepo:   revokedTokenRepo,
 	})
 
 	// 6. Start HTTP Server
-	slog.Info("Starting server", "app", cfg.AppName, "port", cfg.AppPort, "env", cfg.AppEnv)
-	if err := r.Run(":" + cfg.AppPort); err != nil {
+	addr := net.JoinHostPort(cfg.AppHost, cfg.AppPort)
+	slog.Info("Starting server", "app", cfg.AppName, "url", "http://"+addr, "env", cfg.AppEnv)
+	if err := r.Run(addr); err != nil {
 		slog.Error("Server failed to run", "error", err)
 	}
 }

@@ -14,7 +14,7 @@ type UserResponse struct {
 	IsAdmin   bool       `json:"is_admin"`
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
-	DeletedAt *time.Time `json:"deleted_at"`
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
 }
 
 // UserListResponse represents compact user data for list endpoints (no timestamps)

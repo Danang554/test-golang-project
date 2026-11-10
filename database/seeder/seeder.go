@@ -15,9 +15,7 @@ func RunAll(db *gorm.DB) error {
 		fn   SeederFunc
 	}{
 		{name: "UserSeeder", fn: SeedUsers},
-		// Daftarkan seeder baru lainnya di sini nantinya, contoh:
-		// {name: "RoleSeeder", fn: SeedRoles},
-		// {name: "ProductSeeder", fn: SeedProducts},
+		{name: "CategorySeeder", fn: SeedCategories},
 	}
 
 	for _, s := range seeders {

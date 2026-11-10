@@ -10,6 +10,7 @@ import (
 
 type Config struct {
 	AppName string
+	AppHost string
 	AppPort string
 	AppEnv  string
 	DB      DatabaseConfig
@@ -47,6 +48,7 @@ func LoadConfig() *Config {
 
 	return &Config{
 		AppName: getEnv("APP_NAME", "test-golang-project"),
+		AppHost: getEnv("APP_HOST", "127.0.0.1"),
 		AppPort: getEnv("APP_PORT", "8080"),
 		AppEnv:  getEnv("APP_ENV", "development"),
 		DB: DatabaseConfig{
