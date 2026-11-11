@@ -31,20 +31,24 @@ func main() {
 	var authController *controller.AuthController
 	var userController *controller.UserController
 	var categoryController *controller.CategoryController
+	var todoController *controller.TodoController
 	var revokedTokenRepo repository.RevokedTokenRepository
 
 	if db != nil {
 		userRepo := repository.NewUserRepository(db)
 		categoryRepo := repository.NewCategoryRepository(db)
+		todoRepo := repository.NewTodoRepository(db)
 		revokedTokenRepo = repository.NewRevokedTokenRepository(db)
 
 		authService := service.NewAuthService(userRepo, revokedTokenRepo, cfg)
 		userService := service.NewUserService(userRepo)
 		categoryService := service.NewCategoryService(categoryRepo)
+		todoService := service.NewTodoService(todoRepo, categoryRepo)
 
 		authController = controller.NewAuthController(authService)
 		userController = controller.NewUserController(userService)
 		categoryController = controller.NewCategoryController(categoryService)
+		todoController = controller.NewTodoController(todoService)
 	}
 
 	// 5. Setup Router & Routes
@@ -54,6 +58,7 @@ func main() {
 		AuthController:     authController,
 		UserController:     userController,
 		CategoryController: categoryController,
+		TodoController:     todoController,
 		RevokedTokenRepo:   revokedTokenRepo,
 	})
 

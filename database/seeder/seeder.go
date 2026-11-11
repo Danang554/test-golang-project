@@ -16,6 +16,7 @@ func RunAll(db *gorm.DB) error {
 	}{
 		{name: "UserSeeder", fn: SeedUsers},
 		{name: "CategorySeeder", fn: SeedCategories},
+		{name: "TodoSeeder", fn: SeedTodos},
 	}
 
 	for _, s := range seeders {

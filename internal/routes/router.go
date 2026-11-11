@@ -19,6 +19,7 @@ type Config struct {
 	AuthController     *controller.AuthController
 	UserController     *controller.UserController
 	CategoryController *controller.CategoryController
+	TodoController     *controller.TodoController
 	RevokedTokenRepo   repository.RevokedTokenRepository
 }
 
@@ -91,6 +92,22 @@ func SetupRouter(c Config) *gin.Engine {
 					categoryGroup.DELETE("/:id", c.CategoryController.Delete)
 					categoryGroup.PATCH("/:id/restore", c.CategoryController.Restore)
 					categoryGroup.DELETE("/:id/permanent", c.CategoryController.ForceDelete)
+				}
+			}
+
+			if c.TodoController != nil {
+				// Todo routes (Creator only management)
+				todoGroup := protected.Group("/todo")
+				{
+					todoGroup.GET("", c.TodoController.GetTodos)
+					todoGroup.POST("", c.TodoController.Create)
+					todoGroup.GET("/deleted", c.TodoController.GetDeletedTodos)
+					todoGroup.GET("/:id", c.TodoController.GetByID)
+					todoGroup.PATCH("/:id", c.TodoController.Update)
+					todoGroup.PATCH("/:id/complete", c.TodoController.ToggleComplete)
+					todoGroup.DELETE("/:id", c.TodoController.Delete)
+					todoGroup.PATCH("/:id/restore", c.TodoController.Restore)
+					todoGroup.DELETE("/:id/permanent", c.TodoController.ForceDelete)
 				}
 			}
 		}

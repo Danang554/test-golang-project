@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 
 	"test-golang-project/internal/entity"
 
@@ -69,7 +70,8 @@ func SeedCategories(db *gorm.DB) error {
 
 	for _, item := range data {
 		var user entity.User
-		if err := db.Where("email = ? AND deleted_at IS NULL", item.UserEmail).First(&user).Error; err != nil {
+		fallbackEmail := strings.Replace(item.UserEmail, "@example.com", "@mail.com", 1)
+		if err := db.Where("(email = ? OR email = ?) AND deleted_at IS NULL", item.UserEmail, fallbackEmail).First(&user).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				log.Printf("  -> [CategorySeeder] User with email '%s' not found or soft-deleted, skipping...\n", item.UserEmail)
 				continue

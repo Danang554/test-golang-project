@@ -1,6 +1,6 @@
 # Golang REST API Starter Project
 
-Project REST API Golang modular dengan arsitektur **Controller - Service - Repository** (mirip konsep Spring Boot).
+Project REST API Golang modular dengan arsitektur **Controller - Service - Repository**.
 
 ---
 
@@ -18,21 +18,31 @@ test-golang-project/
 ├── database/
 │   ├── migrations/                     # File skema database untuk Goose (.sql)
 │   │   └── 00001_create_users_table.sql
-│   └── seeder/                         # Logika pengisian data awal (Admin, dummy user)
+│   └── seeder/                         # Logika pengisian data awal (User, Category, Todo)
 │       ├── seeder.go
-│       └── user_seeder.go
+│       ├── user_seeder.go
+│       ├── category_seeder.go
+│       └── todo_seeder.go
 ├── internal/
 │   ├── controller/                     # Layer Controller HTTP Gin (pengganti handler)
+│   │   ├── auth_controller.go
 │   │   └── user_controller.go
-│   ├── entity/                         # Struct Entity & DTO (Request/Response)
+│   ├── dto/                            # Kontrak Data Transfer Object (Request & Response)
+│   │   ├── auth_request.go
+│   │   ├── auth_response.go
+│   │   ├── user_request.go
+│   │   └── user_response.go
+│   ├── entity/                         # Struct Entity Model Database (MySQL)
 │   │   └── user.go
 │   ├── middleware/                     # Middleware JWT & Auth Guard
 │   │   └── auth_middleware.go
 │   ├── repository/                     # Layer Akses Database MySQL (GORM)
 │   │   └── user_repository.go
+│   ├── routes/                         # Pendaftaran Rute, Endpoint Grouping, & Middleware
+│   │   └── router.go
 │   └── service/                        # Layer Business Logic
-│       ├── user_service.go
-│       └── user_service_test.go        # Unit Test menggunakan Testify Mock
+│       ├── auth_service.go
+│       └── user_service.go
 ├── pkg/
 │   ├── database/                       # Inisialisasi koneksi & connection pool MySQL
 │   │   └── mysql.go
@@ -42,6 +52,7 @@ test-golang-project/
 │       └── response.go
 ├── storage/
 │   └── logs/                           # Folder penyimpanan file log harian (app-YYYY-MM-DD.log)
+├── test/                               # Folder khusus untuk pengujian Endpoint / Integration test
 ├── .env.example
 ├── .env
 ├── .gitignore
@@ -89,25 +100,19 @@ goose -dir database/migrations mysql "root:password@tcp(127.0.0.1:3306)/test_db?
 ```
 
 ### 3. Jalankan Database Seeder (Opsional)
-Mengisi data awal pengguna (Admin & Test User dengan password bcrypt):
+Mengisi data awal untuk 4 User, masing-masing 3 Category, dan setiap Category memiliki 2 Todo (total 24 Todos):
 ```bash
 go run ./cmd/seeder
-# Atau via Makefile:
-make seed
 ```
 
 ### 4. Jalankan Aplikasi
 ```bash
 go run ./cmd/api
-# Atau via Makefile:
-make run
 ```
 
 ### 5. Menjalankan Unit Test
 ```bash
 go test -v ./...
-# Atau via Makefile:
-make test
 ```
 
 ---
@@ -132,6 +137,38 @@ Rotasi log dan retensi otomatis dikelola oleh library `lumberjack` (default rete
 | Method | Endpoint | Keterangan | Auth |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/health` | Health Check status server & DB | Publik |
-| `POST` | `/api/v1/auth/register` | Registrasi akun baru | Publik |
-| `POST` | `/api/v1/auth/login` | Login & mendapatkan JWT token | Publik |
-| `GET` | `/api/v1/profile` | Melihat profil pengguna saat ini | Bearer Token |
+| **Auth** | | | |
+| `POST` | `/api/auth/register` | Registrasi akun baru | Publik |
+| `POST` | `/api/auth/login` | Login & mendapatkan JWT token | Publik |
+| `POST` | `/api/auth/logout` | Logout sesi pengguna | Bearer Token |
+| **Profile** | | | |
+| `GET` | `/api/profile` | Melihat profil pengguna saat ini | Bearer Token |
+| `PATCH` | `/api/profile` | Memperbarui profil akun sendiri | Bearer Token |
+| **User Management** | | *(Khusus Role Admin)* | |
+| `GET` | `/api/user` | Daftar semua pengguna (paginasi & search) | Admin Bearer Token |
+| `POST` | `/api/user` | Menambahkan pengguna baru | Admin Bearer Token |
+| `GET` | `/api/user/deleted` | Daftar pengguna yang telah di-soft-delete | Admin Bearer Token |
+| `GET` | `/api/user/:id` | Detail pengguna berdasarkan ID | Admin Bearer Token |
+| `PATCH` | `/api/user/:id` | Update data pengguna | Admin Bearer Token |
+| `DELETE` | `/api/user/:id` | Soft delete pengguna | Admin Bearer Token |
+| `PATCH` | `/api/user/:id/restore` | Restore pengguna terhapus | Admin Bearer Token |
+| `DELETE` | `/api/user/:id/permanent` | Hapus permanen pengguna | Admin Bearer Token |
+| **Category Management** | | *(Creator Scoped - 404 jika bukan miliknya)* | |
+| `GET` | `/api/category` | Daftar category milik user login | Bearer Token |
+| `POST` | `/api/category` | Buat category baru | Bearer Token |
+| `GET` | `/api/category/deleted` | Daftar category terhapus (trash) milik user | Bearer Token |
+| `GET` | `/api/category/:id` | Detail category | Bearer Token |
+| `PATCH` | `/api/category/:id` | Update category | Bearer Token |
+| `DELETE` | `/api/category/:id` | Soft delete category | Bearer Token |
+| `PATCH` | `/api/category/:id/restore` | Restore category terhapus | Bearer Token |
+| `DELETE` | `/api/category/:id/permanent` | Hapus permanen category | Bearer Token |
+| **Todo Management** | | *(Creator Scoped - 404 jika bukan miliknya)* | |
+| `GET` | `/api/todo` | Daftar todo milik user (filter category_id, is_completed, search) | Bearer Token |
+| `POST` | `/api/todo` | Buat todo baru (opsional category_id) | Bearer Token |
+| `GET` | `/api/todo/deleted` | Daftar todo terhapus (trash) milik user | Bearer Token |
+| `GET` | `/api/todo/:id` | Detail todo | Bearer Token |
+| `PATCH` | `/api/todo/:id` | Update todo (title wajib diisi, description & category_id nullable) | Bearer Token |
+| `PATCH` | `/api/todo/:id/complete` | Toggle status selesai/belum selesai (`is_completed`) | Bearer Token |
+| `DELETE` | `/api/todo/:id` | Soft delete todo | Bearer Token |
+| `PATCH` | `/api/todo/:id/restore` | Restore todo terhapus | Bearer Token |
+| `DELETE` | `/api/todo/:id/permanent` | Hapus permanen todo | Bearer Token |
